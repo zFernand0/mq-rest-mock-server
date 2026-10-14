@@ -25,14 +25,16 @@ function createApp({ config: overrides = {}, env = {}, fixtures, users, now, sce
   app.use((req, res, next) => {
     state.cleanup();
     const suppliedId = req.get('x-request-id');
+    const requestPath = req.path.slice(0, 1024);
     req.requestId = suppliedId && /^[\w.-]{1,128}$/.test(suppliedId) ? suppliedId : crypto.randomUUID();
     res.set({ 'X-Request-Id': req.requestId, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' });
     state.metrics.requests++;
     res.once('finish', () => {
       state.metrics.responses[res.statusCode] = (state.metrics.responses[res.statusCode] || 0) + 1;
       // Keep credentials, headers, query strings, and message bodies out of diagnostics.
-      state.audit.push({ requestId: req.requestId, method: req.method, path: req.path.slice(0, 1024), status: res.statusCode, at: state.now(), ...(req.session ? { username: req.session.username } : {}) });
+      state.audit.push({ requestId: req.requestId, method: req.method, path: requestPath, status: res.statusCode, at: state.now(), ...(req.session ? { username: req.session.username } : {}) });
       if (state.audit.length > config.maxAuditEntries) state.audit.splice(0, state.audit.length - config.maxAuditEntries);
+      if (config.logRequests) logger.log(`${req.method} ${requestPath} -> ${res.statusCode}`);
     });
     next();
   });
@@ -82,7 +84,7 @@ function createApp({ config: overrides = {}, env = {}, fixtures, users, now, sce
     for (const [method, handler] of Object.entries(methods)) route[method](handler);
     route.all((req, res) => { res.set('Allow', Object.keys(methods).map(method => method.toUpperCase()).join(', ')); fail(405, 'Method is not supported for this MQ resource'); });
   }
-  addAdminApi(register, state, auth);
+  addAdminApi(register, state, auth, config);
   addMessaging(register, state, auth, config);
   app.use('/ibmmq/rest/:version', (req, res, next) => {
     if (!['v1', 'v2', 'v3'].includes(req.params.version)) fail(404, 'Unsupported REST API version');

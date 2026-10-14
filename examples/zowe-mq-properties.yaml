@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Fernando Rijo Cedeno
+# Local mock credentials only; no live MQ connection is used.
+mq:
+  user: adminusr
+  password: adminpas
+  host: 127.0.0.1
+  port: 9080
+  protocol: http
+  rejectUnauthorized: false
+  qmgr: QM1
+test:
+  setup:
+    cmd: DEFINE QL(ZOWE.TEST.DONT.USE) DESCR('A test queue to play with for Zowe') HARDENBO INDXTYPE(MSGID)
+    expect: CSQMAQLC ' DEFINE QL' NORMAL COMPLETION
+  run:
+    cmd: DISPLAY QL(ZOWE.TEST.DONT.USE) ALL
+    expect: CSQMDRTS ' DISPLAY QLOCAL' NORMAL COMPLETION
+  teardown:
+    cmd: DELETE QL(ZOWE.TEST.DONT.USE)
+    expect: CSQMUQLC ' DELETE QL' NORMAL COMPLETION

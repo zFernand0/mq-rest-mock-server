@@ -25,6 +25,48 @@ Tests start independent servers on ephemeral loopback ports. They do not require
 
 The lockfile includes exact versions and integrity hashes without registry URLs. Installs use your npm registry configuration. Preserve this format with `npm install --omit-lockfile-registry-resolved` when updating dependencies.
 
+### Run the Zowe MQ plug-in system tests
+
+With this mock's dependencies and the MQ plug-in checkout's dependencies installed, run:
+
+```sh
+cd /path/to/mq-rest-mock-server
+npm run test:zowe-mq -- ~/gh/zowe/mq
+```
+
+The checkout argument defaults to `~/gh/zowe/mq`. The runner copies the plug-in's public sources and tests into a temporary directory, builds them with its installed TypeScript compiler, and runs its existing `npm run test:system` script. It starts an isolated HTTP mock on an ephemeral loopback port, supplies mock credentials through the test utilities' `propdirectory`/`propfile` settings, and enables z/OS completion text. The setup, display, delete commands and their expectations are read unchanged from the plug-in's `example_properties.yaml`.
+
+The runner uses the checkout's installed Zowe CLI, creates temporary test profiles, propagates build/test failure exit codes, and removes its listener and temporary files when finished. No plug-in source, lockfile, connection configuration, installed global profiles, or generated build files in the original checkout are changed. No IBM MQ installation or running mock is required.
+
+To run `npm run test:system` directly in an already built plug-in checkout, start the mock in one terminal:
+
+```sh
+cd /path/to/mq-rest-mock-server
+MQSC_RESPONSE_STYLE=zos LOG_REQUESTS=true npm start
+```
+
+In a second terminal, copy this repository's local mock properties into the plug-in's ignored configuration file and run the tests:
+
+```sh
+cd ~/gh/zowe/mq
+cp /path/to/mq-rest-mock-server/examples/zowe-mq-properties.yaml \
+  __tests__/__resources__/properties/custom_properties.yaml
+unset NO_COLOR
+npm run test:system
+```
+
+Unsetting `NO_COLOR` avoids a Node.js warning on stderr when the CLI test utilities set `FORCE_COLOR`. The tests require empty CLI stderr. The configuration uses HTTP at `127.0.0.1:9080`, the mock administrator, and `QM1`, with the original setup/display/delete commands and expectations. No tracked plug-in configuration or package scripts need changing. To select the same properties without copying them:
+
+```sh
+cd ~/gh/zowe/mq
+env -u NO_COLOR propdirectory="/path/to/mq-rest-mock-server/examples/" \
+  propfile=zowe-mq-properties.yaml npm run test:system
+```
+
+This direct command uses port 9080 and writes the plug-in's usual test reports in its checkout. Use the isolated runner for automatic builds, ephemeral ports, and cleanup.
+
+`LOG_REQUESTS=true` prints each completed request as, for example, `POST /ibmmq/rest/v1/admin/action/qmgr/QM1/mqsc -> 200`. It logs the method, URL path, and response status through `logger.log`, including failed requests. Headers, query strings, credentials, and bodies are omitted. Request logging is disabled by default.
+
 ## Quick examples
 
 ### Discover queue managers
@@ -143,7 +185,11 @@ Mock-only `mockOrderBy=name/A` or `/D`, `mockOffset=0`, and `mockLimit=20` enabl
 
 DISPLAY accepts wildcard names, `responseParameters`, and a simple `WHERE ATTRIBUTE OPERATOR VALUE`. Operators are `EQ`, `NE`, `GT`, `LT`, `GE`, `LE`, `LK`, and `NL`. `LIKE` and `REPLACE` are supported for DEFINE. Plain commands support quoted names and doubled apostrophes. Only one command is accepted per request; no shell commands execute.
 
-MQSC flags use `"replace":"yes"`, `"purge":"yes"`, `"share":"yes"`, or their opposite flags such as `"noreplace":"yes"` and `"noshare":"yes"`. Queue attributes map to their REST representations. Other object definitions accept scalar/string-list MQSC fixture attributes and return them on DISPLAY; this does not provide IBM's complete schema or parameter semantics. Unknown operations are rejected.
+Queue qualifiers also accept `QL`, `QA`, `QR`, and `QM`. `HARDENBO`/`NOHARDENBO` and `INDXTYPE(NONE|MSGID|CORRELID|GROUPID|MSGTOKEN)` round trip as queue configuration metadata through MQSC and the v1 REST attributes `extended.hardenGetBackout` and `storage.indexType`. Backout logging and physical message indexes are not simulated.
+
+MQSC flags use `"replace":"yes"`, `"purge":"yes"`, `"share":"yes"`, `"hardenbo":"yes"`, or their opposite flags such as `"noreplace":"yes"`, `"noshare":"yes"`, and `"nohardenbo":"yes"`. Queue attributes map to their REST representations. Other object definitions accept scalar/string-list MQSC fixture attributes and return them on DISPLAY; this does not provide IBM's complete schema or parameter semantics. Unknown operations are rejected.
+
+`MQSC_RESPONSE_STYLE=zos` adds `CSQN205I` and final `CSQ9022I ... NORMAL COMPLETION` lines for successful plain DEFINE, DISPLAY, and DELETE QLOCAL commands. DEFINE/DELETE retain the submitted queue qualifier, including `QL`; DISPLAY uses `QLOCAL`. Failed commands retain their nonzero completion/reason codes and receive no success trailer. JSON-form responses and other operations retain their existing envelopes. This is a narrow text compatibility mode for clients such as the Zowe MQ plug-in, rather than a full z/OS command processor.
 
 ### Messaging behavior
 
@@ -247,6 +293,8 @@ The mock-only `simulate` query supports `unauthorized`, `forbidden`, `notfound`,
 | `OTP_TTL_MS` | otpTtlMs | 300000 |
 | `OTP_SINGLE_USE` | otpSingleUse | true |
 | `REQUIRE_CSRF` | requireCsrf | true |
+| `MQSC_RESPONSE_STYLE` | mqscResponseStyle | distributed; `zos` enables local-queue completion text |
+| `LOG_REQUESTS` | logRequests | false; `true` prints completed requests |
 | `MAX_QUEUE_MANAGERS` | maxQueueManagers | 100 |
 | `MAX_OBJECTS` | maxObjects | 10000 across all managers |
 | `MAX_MESSAGES` | maxMessages | 10000 across all queues |

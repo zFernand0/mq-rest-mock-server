@@ -5,6 +5,7 @@
 const { MqError, fail, object, keys, wildcard, name: validateName } = require('./protocol');
 const { OBJECT_TYPES, QUEUE_TYPES, queueParameters, queueFromParameters, createResource } = require('./resources');
 const VERBS = { dis: 'display', def: 'define', alt: 'alter', del: 'delete' };
+const QUALIFIERS = { ql: 'qlocal', qa: 'qalias', qr: 'qremote', qm: 'qmodel' };
 const QUEUES = { queue: null, qlocal: 'local', qalias: 'alias', qremote: 'remote', qmodel: 'model', qstatus: 'local' };
 const STATUSES = { chstatus: 'channel', lsstatus: 'listener', svstatus: 'service' };
 function tokens(text) {
@@ -54,7 +55,7 @@ function parseRequest(body) {
     const responseParameters = [];
     const displaying = ['display', 'dis'].includes(list[0].key);
     for (const token of list.slice(2)) {
-      if (!displaying && token.value === undefined && ['replace', 'noreplace', 'purge', 'nopurge', 'share', 'noshare', 'trigger', 'notrigger'].includes(token.key)) parameters[token.key] = 'YES';
+      if (!displaying && token.value === undefined && ['replace', 'noreplace', 'purge', 'nopurge', 'share', 'noshare', 'trigger', 'notrigger', 'hardenbo', 'nohardenbo'].includes(token.key)) parameters[token.key] = 'YES';
       else if (token.value === undefined) responseParameters.push(token.key);
       else {
         if (Object.hasOwn(parameters, token.key)) fail(400, 'Duplicate MQSC parameter');
@@ -62,7 +63,7 @@ function parseRequest(body) {
       }
     }
     if (parameters.names !== undefined) parameters.names = String(parameters.names).split(',').map(value => value.trim());
-    return normalize({ command: list[0].key, qualifier: list[1].key, name: list[1].value === undefined ? undefined : String(list[1].value), parameters, responseParameters, plain: true });
+    return { ...normalize({ command: list[0].key, qualifier: list[1].key, name: list[1].value === undefined ? undefined : String(list[1].value), parameters, responseParameters, plain: true }), sourceQualifier: list[1].key };
   }
   if (body.type !== 'runCommandJSON') fail(400, 'type must be runCommand or runCommandJSON');
   keys(body, ['type', 'command', 'qualifier', 'name', 'parameters', 'responseParameters']);
@@ -80,7 +81,7 @@ function normalize(request) {
     parameters[normalized] = value;
   }
   const responseParameters = request.responseParameters === undefined ? [] : request.responseParameters;
-  for (const [positive, negative] of [['replace', 'noreplace'], ['purge', 'nopurge'], ['share', 'noshare'], ['trigger', 'notrigger']]) {
+  for (const [positive, negative] of [['replace', 'noreplace'], ['purge', 'nopurge'], ['share', 'noshare'], ['trigger', 'notrigger'], ['hardenbo', 'nohardenbo']]) {
     if (parameters[positive] !== undefined && parameters[negative] !== undefined) fail(400, 'Conflicting MQSC flag parameters');
     for (const flag of [positive, negative]) {
       if (parameters[flag] !== undefined && String(parameters[flag]).toUpperCase() !== 'YES') fail(400, `MQSC ${flag} must be YES; use its opposite flag to disable it`);
@@ -89,7 +90,8 @@ function normalize(request) {
   }
   if (!Array.isArray(responseParameters) || responseParameters.some(field => typeof field !== 'string' || !/^[a-z][a-z0-9]*$/i.test(field))) fail(400, 'responseParameters must contain MQSC attribute names');
   if (command !== 'display' && responseParameters.length) fail(400, 'responseParameters is valid only for DISPLAY');
-  return { command, qualifier: request.qualifier.toLowerCase(), name: request.name, parameters, responseParameters: responseParameters.map(field => field.toLowerCase()), plain: request.plain };
+  const qualifier = request.qualifier.toLowerCase();
+  return { command, qualifier: QUALIFIERS[qualifier] || qualifier, name: request.name, parameters, responseParameters: responseParameters.map(field => field.toLowerCase()), plain: request.plain };
 }
 function commandResult(rows, request, { reasonCode = 0, message = 'Mock MQSC command completed.' } = {}) {
   const completionCode = reasonCode ? 2 : 0;
@@ -232,11 +234,22 @@ function select(rows, request, identity) {
   }
   return commandResult(rows, request);
 }
-function runMqsc(state, qmgr, request) {
-  try { return execute(state, qmgr, request); }
+function runMqsc(state, qmgr, request, responseStyle = 'distributed') {
+  let result;
+  try { result = execute(state, qmgr, request); }
   catch (error) {
     if (error instanceof MqError && error.reasonCode !== undefined && error.status !== 503) return commandResult([], request, { reasonCode: error.reasonCode, message: error.message });
     throw error;
   }
+  const processor = { define: 'CSQMAQLC', display: 'CSQMDRTS', delete: 'CSQMUQLC' }[request.command];
+  if (responseStyle === 'zos' && request.plain && request.qualifier === 'qlocal' && processor && result.overallCompletionCode === 0) {
+    const qualifier = request.command === 'display' ? request.qualifier : request.sourceQualifier;
+    const completion = `CSQ9022I ${qmgr.name} ${processor} ' ${request.command.toUpperCase()} ${qualifier.toUpperCase()}' NORMAL COMPLETION`;
+    for (const response of result.commandResponse) {
+      const text = request.command === 'display' ? response.text : [];
+      response.text = [`CSQN205I COUNT=${text.length + 1}, RETURN=00000000, REASON=00000000`, ...text, completion];
+    }
+  }
+  return result;
 }
 module.exports = { parseRequest, runMqsc, whereFilter };

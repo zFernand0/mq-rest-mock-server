@@ -8,6 +8,14 @@ const { createApp } = require('../server');
 const { createConfig } = require('../src/config');
 test('configuration validates types, ranges, precedence, and immutable defaults', () => {
   assert.equal(createConfig().port, 9080);
+  assert.equal(createConfig().logRequests, false);
+  assert.equal(createConfig({}, { LOG_REQUESTS: 'true' }).logRequests, true);
+  assert.equal(createConfig({ logRequests: false }, { LOG_REQUESTS: 'true' }).logRequests, false);
+  assert.throws(() => createConfig({ logRequests: 'yes' }), /LOG_REQUESTS/);
+  assert.equal(createConfig().mqscResponseStyle, 'distributed');
+  assert.equal(createConfig({}, { MQSC_RESPONSE_STYLE: 'zos' }).mqscResponseStyle, 'zos');
+  assert.equal(createConfig({ mqscResponseStyle: 'distributed' }, { MQSC_RESPONSE_STYLE: 'zos' }).mqscResponseStyle, 'distributed');
+  assert.throws(() => createConfig({ mqscResponseStyle: 'invalid' }), /MQSC_RESPONSE_STYLE/);
   assert.equal(createConfig({ port: 0 }, { PORT: '1234' }).port, 0);
   assert.equal(createConfig({}, { PORT: '1234', REQUIRE_CSRF: 'false', HOST: 'localhost', BODY_LIMIT: '2mb', CORS_ORIGIN: '*' }).requireCsrf, false);
   assert.ok(Object.isFrozen(createConfig()));
