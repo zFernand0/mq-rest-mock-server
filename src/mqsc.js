@@ -52,9 +52,9 @@ function parseRequest(body) {
     if (list.length < 2 || list[0].value !== undefined) fail(400, 'MQSC requires a verb and qualifier');
     const parameters = {};
     const responseParameters = [];
+    const displaying = ['display', 'dis'].includes(list[0].key);
     for (const token of list.slice(2)) {
-      if (token.value === undefined && ['replace', 'purge', 'force'].includes(token.key)) parameters[token.key] = true;
-      else if (token.value === undefined && ['noreplace', 'nopurge'].includes(token.key)) parameters[token.key.slice(2)] = false;
+      if (!displaying && token.value === undefined && ['replace', 'noreplace', 'purge', 'nopurge', 'share', 'noshare', 'trigger', 'notrigger'].includes(token.key)) parameters[token.key] = 'YES';
       else if (token.value === undefined) responseParameters.push(token.key);
       else {
         if (Object.hasOwn(parameters, token.key)) fail(400, 'Duplicate MQSC parameter');
@@ -80,6 +80,13 @@ function normalize(request) {
     parameters[normalized] = value;
   }
   const responseParameters = request.responseParameters || [];
+  for (const [positive, negative] of [['replace', 'noreplace'], ['purge', 'nopurge'], ['share', 'noshare'], ['trigger', 'notrigger']]) {
+    if (parameters[positive] !== undefined && parameters[negative] !== undefined) fail(400, 'Conflicting MQSC flag parameters');
+    for (const flag of [positive, negative]) {
+      if (parameters[flag] !== undefined && String(parameters[flag]).toUpperCase() !== 'YES') fail(400, `MQSC ${flag} must be YES; use its opposite flag to disable it`);
+    }
+    if (parameters[negative] !== undefined) { parameters[positive] = 'NO'; delete parameters[negative]; }
+  }
   if (!Array.isArray(responseParameters) || responseParameters.some(field => typeof field !== 'string' || !/^[a-z][a-z0-9]*$/i.test(field))) fail(400, 'responseParameters must contain MQSC attribute names');
   if (command !== 'display' && responseParameters.length) fail(400, 'responseParameters is valid only for DISPLAY');
   return { command, qualifier: request.qualifier.toLowerCase(), name: request.name, parameters, responseParameters: responseParameters.map(field => field.toLowerCase()), plain: request.plain };

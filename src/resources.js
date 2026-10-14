@@ -7,12 +7,12 @@ const QUEUE_TYPES = { local: 'QLOCAL', alias: 'QALIAS', model: 'QMODEL', remote:
 const QUEUE_FIELDS = {
   general: { description: ['descr', 'string'], inhibitGet: ['get', 'inhibit'], inhibitPut: ['put', 'inhibit'], isTransmissionQueue: ['usage', 'transmission'] },
   storage: { maximumDepth: ['maxdepth', 'integer', 999999999], maximumMessageLength: ['maxmsgl', 'integer', 104857600], messageDeliverySequence: ['msgdlvsq', 'enum', { fifo: 'FIFO', priority: 'PRIORITY' }] },
-  applicationDefaults: { priority: ['defprty', 'integer', 9], persistence: ['defpsist', 'enum', { persistent: 'YES', nonPersistent: 'NO' }] },
+  applicationDefaults: { messagePriority: ['defprty', 'integer', 9], messagePersistence: ['defpsist', 'enum', { persistent: 'YES', nonPersistent: 'NO' }] },
   extended: { allowSharedInput: ['share', 'boolean'], backoutThreshold: ['bothresh', 'integer', 999999999], backoutRequeueQueueName: ['boqname', 'string'] },
   alias: { targetName: ['target', 'string'], targetType: ['targtype', 'enum', { queue: 'QUEUE', topic: 'TOPIC' }] },
   remote: { queueName: ['rname', 'string'], qmgrName: ['rqmname', 'string'], transmissionQueueName: ['xmitq', 'string'] },
   model: { type: ['deftype', 'enum', { permanentDynamic: 'PERMDYN', temporaryDynamic: 'TEMPDYN' }] },
-  cluster: { name: ['cluster', 'string'], namelistName: ['clusnl', 'string'], workloadPriority: ['clwlprty', 'integer', 9], workloadRank: ['clwlrank', 'integer', 9] },
+  cluster: { name: ['cluster', 'string'], namelist: ['clusnl', 'string'], workloadPriority: ['clwlprty', 'integer', 9], workloadRank: ['clwlrank', 'integer', 9] },
   trigger: { enabled: ['trigger', 'boolean'], type: ['trigtype', 'enum', { first: 'FIRST', every: 'EVERY', depth: 'DEPTH', none: 'NONE' }], depth: ['trigdpth', 'integer', 999999999], data: ['trigdata', 'string'], initiationQueueName: ['initq', 'string'], processName: ['process', 'string'] }
 };
 function validateQueue(update) {
@@ -45,9 +45,9 @@ function createQueue(update, base = {}) {
     name: update.name, type,
     general: { description: '', inhibitGet: false, inhibitPut: false, isTransmissionQueue: false },
     storage: { maximumDepth: 5000, maximumMessageLength: 4194304, messageDeliverySequence: 'priority' },
-    applicationDefaults: { priority: 0, persistence: 'nonPersistent' },
+    applicationDefaults: { messagePriority: 0, messagePersistence: 'nonPersistent' },
     extended: { allowSharedInput: true, backoutThreshold: 0, backoutRequeueQueueName: '' },
-    cluster: { name: '', namelistName: '', workloadPriority: 0, workloadRank: 0 },
+    cluster: { name: '', namelist: '', workloadPriority: 0, workloadRank: 0 },
     trigger: { enabled: false, type: 'first', depth: 1, data: '', initiationQueueName: '', processName: '' }
   }, base);
   if (type === 'alias') queue.alias = { targetName: '', targetType: 'queue', ...queue.alias };

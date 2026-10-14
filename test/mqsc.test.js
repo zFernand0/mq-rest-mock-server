@@ -8,10 +8,9 @@ const { setup, jsonCommand, messagePath } = require('./helpers');
 test('plain MQSC preserves quoted names, escaped apostrophes, and text response envelopes', async t => {
   const { mqsc, request } = await setup(t);
   const plain = command => mqsc({ type: 'runCommand', parameters: { command } });
-  let result = await plain("DEFINE QLOCAL('lower.Q') DESCR('It''s a test') MAXDEPTH(2) SHARE(NO) TRIGGER");
-  // Bare TRIGGER is a DISPLAY response parameter in this subset; ambiguous input is rejected.
+  let result = await plain("DEFINE QLOCAL('lower.Q') DESCR('It''s a test') MAXDEPTH(2) NOSHARE UNSUPPORTED");
   assert.equal(result.status, 400);
-  result = await plain("DEFINE QLOCAL('lower.Q') DESCR('It''s a test') MAXDEPTH(2) SHARE(NO)");
+  result = await plain("DEFINE QLOCAL('lower.Q') DESCR('It''s a test') MAXDEPTH(2) NOSHARE TRIGGER");
   assert.equal(result.status, 200); assert.equal(result.data.overallCompletionCode, 0);
   assert.match(result.data.commandResponse[0].text[0], /queue created/);
   const display = await plain("DIS QLOCAL('lower.Q') DESCR MAXDEPTH");
@@ -32,10 +31,10 @@ test('JSON MQSC definitions share state with the v1 queue and messaging APIs', a
   const created = await mqsc(jsonCommand('DEFINE', 'QLOCAL', 'TEST.Q', parameters));
   assert.equal(created.status, 200); assert.equal(created.data.overallReasonCode, 0); assert.match(created.data.commandResponse[0].message[0], /^AMQ8006I/);
   const queue = (await request('/ibmmq/rest/v1/admin/qmgr/QM1/queue/TEST.Q?attributes=*')).data.queue[0];
-  assert.equal(queue.applicationDefaults.persistence, 'persistent'); assert.equal(queue.trigger.type, 'every'); assert.equal(queue.general.inhibitGet, false);
+  assert.equal(queue.applicationDefaults.messagePersistence, 'persistent'); assert.equal(queue.trigger.type, 'every'); assert.equal(queue.general.inhibitGet, false);
   const dup = await mqsc(jsonCommand('define', 'qlocal', 'TEST.Q'));
   assert.equal(dup.data.overallCompletionCode, 2); assert.equal(dup.data.commandResponse[0].reasonCode, 4001);
-  assert.equal((await mqsc(jsonCommand('define', 'qlocal', 'TEST.Q', { replace: true, maxdepth: 3 }))).data.overallCompletionCode, 0);
+  assert.equal((await mqsc(jsonCommand('define', 'qlocal', 'TEST.Q', { replace: "yes", maxdepth: 3 }))).data.overallCompletionCode, 0);
   assert.equal((await mqsc(jsonCommand('define', 'queue', 'TEST.REMOTE', { type: 'QREMOTE', rname: 'Q', rqmname: 'QM2', xmitq: 'XMIT' }))).data.overallCompletionCode, 0);
   assert.equal((await mqsc(jsonCommand('define', 'qalias', 'TEST.ALIAS', { target: 'TEST.Q', targtype: 'queue' }))).data.overallCompletionCode, 0);
   assert.equal((await mqsc(jsonCommand('define', 'qmodel', 'TEST.MODEL', { deftype: 'permdyn' }))).data.overallCompletionCode, 0);
@@ -49,7 +48,7 @@ test('JSON MQSC definitions share state with the v1 queue and messaging APIs', a
   assert.equal((await mqsc(jsonCommand('clear', 'qlocal', 'DEV.QUEUE.1'))).data.overallCompletionCode, 0);
   assert.equal((await request(messagePath)).status, 204);
   await put('purge message');
-  assert.equal((await mqsc(jsonCommand('delete', 'qlocal', 'DEV.QUEUE.1', { purge: true }))).data.overallCompletionCode, 0);
+  assert.equal((await mqsc(jsonCommand('delete', 'qlocal', 'DEV.QUEUE.1', { purge: "yes" }))).data.overallCompletionCode, 0);
 });
 for (const [qualifier, identity, parameters] of [
   ['channel', 'channel', { chltype: 'SVRCONN', descr: 'Test' }], ['listener', 'listener', { port: 1515 }],

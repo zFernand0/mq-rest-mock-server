@@ -213,7 +213,7 @@ function addAdminApi(register, state, auth) {
       let records = [...qmgr.objects.subscriptions.values()].map(sub => ({
         id: crypto.createHash('sha256').update(JSON.stringify([qmgr.name, sub.sub])).digest('hex').slice(0, 48),
         name: sub.sub, resolvedTopicString: sub.topicstr,
-        topic: { name: '', definedString: sub.topicstr }, destination: { queueName: sub.dest, qmgrName: sub.destqm }, general: { durable: sub.durable === 'YES' }
+        topic: { name: '', definedString: sub.topicstr }, destination: { name: sub.dest, qmgrName: sub.destqm }, general: { isDurable: sub.durable === 'YES' }
       }));
       if (req.params.subscriptionName) {
         records = records.filter(record => record.name === req.params.subscriptionName);

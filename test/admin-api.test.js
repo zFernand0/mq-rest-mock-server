@@ -57,7 +57,7 @@ test('all queue types return their defining objects and invalid updates do not m
     { name: 'BAD.Q', type: 'bad' }, { name: 'bad name' }, { name: 'BAD.Q', unknown: true },
     { name: 'BAD.Q', general: { extra: 1 } }, { name: 'BAD.Q', general: { inhibitGet: 'true' } },
     { name: 'BAD.Q', storage: { maximumDepth: '100' } }, { name: 'BAD.Q', storage: { maximumDepth: -1 } },
-    { name: 'BAD.Q', applicationDefaults: { persistence: 'invalid' } },
+    { name: 'BAD.Q', applicationDefaults: { messagePersistence: 'invalid' } },
     { name: 'BAD.Q', general: { description: 1 } }, { name: 'BAD.Q', general: { description: 'x'.repeat(65) } },
     { name: 'BAD.Q', general: [] }, { name: 'BAD.Q', alias: { targetName: 'DEV.QUEUE.1' } }
   ]) assert.equal((await request(queuePath, { method: 'POST', body })).status, 400, JSON.stringify(body));
@@ -128,11 +128,11 @@ test('v1 channel and subscription queries use MQSC-created definitions', async t
   assert.equal((await request(`${channels}?type=receiver&name=TEST.*`)).data.channel.length, 1);
   const subs = '/ibmmq/rest/v1/admin/qmgr/QM1/subscription';
   const record = (await request(`${subs}/DEV.SUB?attributes=topic,destination,general`)).data.subscription[0];
-  assert.match(record.id, /^[a-f\d]{48}$/); assert.equal(record.resolvedTopicString, 'dev/events'); assert.equal(record.destination.queueName, 'DEV.QUEUE.2');
+  assert.match(record.id, /^[a-f\d]{48}$/); assert.equal(record.resolvedTopicString, 'dev/events'); assert.equal(record.destination.name, 'DEV.QUEUE.2');
   assert.equal((await request(`${subs}?id=${record.id.toUpperCase()}`)).data.subscription.length, 1);
-  assert.equal((await request(`${subs}?name=DEV.*&filter=general.durable:equalTo:true`)).data.subscription.length, 1);
+  assert.equal((await request(`${subs}?name=DEV.*&filter=general.isDurable:equalTo:true`)).data.subscription.length, 1);
   assert.equal((await request(`${subs}?name=`)).data.subscription.length, 0);
-  for (const path of [`${channels}?type=bad`, `${channels}?name=exact`, `${channels}/QM1.TO.QM2?name=*`, `${subs}?name=exact`, `${subs}?id=bad`, `${subs}/DEV.SUB?id=${record.id}`, `${subs}?id=${record.id}&name=*`, `${subs}/DEV.SUB?name=*`, `${subs}/DEV.SUB?filter=general.durable:equalTo:true`, `${subs}?id=${record.id}&filter=general.durable:equalTo:true`]) assert.equal((await request(path)).status, 400, path);
+  for (const path of [`${channels}?type=bad`, `${channels}?name=exact`, `${channels}/QM1.TO.QM2?name=*`, `${subs}?name=exact`, `${subs}?id=bad`, `${subs}/DEV.SUB?id=${record.id}`, `${subs}?id=${record.id}&name=*`, `${subs}/DEV.SUB?name=*`, `${subs}/DEV.SUB?filter=general.isDurable:equalTo:true`, `${subs}?id=${record.id}&filter=general.isDurable:equalTo:true`]) assert.equal((await request(path)).status, 400, path);
   assert.equal((await request(`${subs}/MISSING`)).status, 404);
   assert.equal((await request(subs.replace('/v1/', '/v3/'))).status, 404);
   assert.equal((await request(channels.replace('/v1/', '/v2/'))).status, 404);

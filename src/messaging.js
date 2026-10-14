@@ -7,6 +7,7 @@ const { fail, query, integer, name } = require('./protocol');
 const MEDIA_TYPES = ['text/plain', 'text/html', 'text/xml', 'application/json', 'application/xml'];
 function identifier(value, version, correlation = false) {
   if (value === undefined) return undefined;
+  if (typeof value !== 'string') fail(400, 'MQ identifiers must be strings');
   const pattern = version === 'v3' ? /^ID:([a-f\d]{48})$/i : /^([a-f\d]{48})$/i;
   const match = pattern.exec(value);
   if (match) return `ID:${match[1].toLowerCase()}`;
@@ -18,7 +19,7 @@ function externalId(value, version) {
 }
 function properties(header) {
   if (header === undefined) return null;
-  if (!/^[\x20-\x7e]{1,8192}$/.test(header)) fail(400, 'User properties must fit an ASCII HTTP header');
+  if (typeof header !== 'string' || !/^[\x20-\x7e]{1,8192}$/.test(header)) fail(400, 'User properties must fit an ASCII HTTP header');
   // Quoted strings may contain commas and escaped double quotes.
   const entries = header.match(/(?:[^,"\\]|\\.|"(?:[^"\\]|\\.)*")+/g);
   if (!entries || entries.join(',') !== header) fail(400, 'Invalid ibm-mq-usr properties');
@@ -96,7 +97,7 @@ function addMessaging(register, state, auth, config) {
     post(req, res) {
       query(req, []);
       const { qmgr, queue } = queueContext(req, 'put');
-      const message = createMessage(req, state, queue.applicationDefaults.priority);
+      const message = createMessage(req, state, queue.applicationDefaults.messagePriority);
       if (Buffer.byteLength(message.body) > qmgr.parameters.maxmsgl) fail(400, 'Message exceeds queue manager MAXMSGL', { reasonCode: 2030 });
       state.deliver([{ qmgr, queue, message }]);
       res.set('ibm-mq-resolved-qmgr', qmgr.name).set('ibm-mq-md-messageId', externalId(`ID:${message.messageId}`, req.params.version));

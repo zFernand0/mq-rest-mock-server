@@ -13,6 +13,7 @@ const { MqError, fail, errorBody, jsonBody, keys, query } = require('./protocol'
 const { addAdminApi } = require('./admin-api');
 const { addMessaging } = require('./messaging');
 const { createMockRouter, validateScenarios, scenarioMiddleware } = require('./mock-controls');
+const { createOpenApi } = require('./openapi');
 function createApp({ config: overrides = {}, env = {}, fixtures, users, now, scenarios = [], logger = console } = {}) {
   const config = createConfig(overrides, env);
   const state = createState(config, { fixtures, now });
@@ -39,6 +40,8 @@ function createApp({ config: overrides = {}, env = {}, fixtures, users, now, sce
   app.use(cookieParser());
   app.use(express.raw({ type: () => true, limit: config.bodyLimit, inflate: false }));
   app.get('/health', (req, res) => res.json({ status: 'ok', product: 'IBM MQ REST mock', apiVersions: ['v1', 'v2', 'v3'], ...state.counts() }));
+  const openapi = createOpenApi();
+  app.get('/openapi.json', (req, res) => res.json(openapi));
   app.post('/auth/generate-otp', (req, res) => {
     const body = jsonBody(req); keys(body, ['username']);
     res.json(auth.generateOTP(body.username));
