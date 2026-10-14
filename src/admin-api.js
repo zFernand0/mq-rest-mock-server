@@ -119,6 +119,10 @@ function addAdminApi(register, state, auth) {
       const qmgr = state.qmgr(req.params.qmgrName);
       const update = jsonBody(req);
       name(update.name);
+      if (values.like === undefined) {
+        const required = { alias: ['alias', 'targetName'], remote: ['remote', 'qmgrName'], model: ['model', 'type'] }[update.type];
+        if (required && update[required[0]]?.[required[1]] === undefined) fail(400, `${required.join('.')} is required for this queue type`);
+      }
       const defaultName = `SYSTEM.DEFAULT.${(update.type || 'local').toUpperCase()}.QUEUE`;
       const base = values.like === undefined ? qmgr.objects.queues.get(defaultName) : state.queue(qmgr, values.like);
       state.putQueue(qmgr, createQueue(update, base), { replace: values.noReplace === undefined });

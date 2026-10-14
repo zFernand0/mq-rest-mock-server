@@ -137,7 +137,7 @@ test('unsupported fixture message formats remain available after failed consumpt
 });
 test('waiting consumers receive a later put exactly once under concurrency', async t => {
   const { request, put, app } = await setup(t);
-  const consumers = Array.from({ length: 4 }, () => request(`${messagePath}?wait=100`, { method: 'DELETE' }));
+  const consumers = Array.from({ length: 4 }, () => request(`${messagePath}?wait=500`, { method: 'DELETE' }));
   await waitUntil(() => app.locals.state.waiters === 4);
   await put('one delivery');
   const responses = await Promise.all(consumers);

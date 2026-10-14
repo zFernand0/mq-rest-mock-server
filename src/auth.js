@@ -17,6 +17,7 @@ function normalizeUsers(users) {
   for (const [username, user] of Object.entries(users)) {
     object(user, 'User');
     keys(user, ['password', 'otp', 'roles', 'permissions'], 'user');
+    if (user.otp !== undefined && typeof user.otp !== 'boolean' || user.password !== undefined && typeof user.password !== 'string') throw new TypeError('User passwords must be strings and OTP settings must be boolean');
     if (!username || username.includes(':') || !Array.isArray(user.roles) || !user.roles.length ||
         user.roles.some(role => !ROLES.includes(role)) ||
         (user.otp !== true && (typeof user.password !== 'string' || !user.password))) throw new TypeError('Users require a username, password or OTP, and valid MQ roles');

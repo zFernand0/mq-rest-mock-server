@@ -111,6 +111,9 @@ function createResource(type, resourceName, parameters = {}) {
   name(resourceName, 'Object name', type === 'channel' ? 20 : 48);
   object(parameters, 'MQSC parameters');
   const record = merge({ ...spec.defaults }, parameters);
+  for (const [key, defaultValue] of Object.entries(spec.defaults)) {
+    if (Array.isArray(defaultValue) ? !Array.isArray(record[key]) : typeof record[key] !== typeof defaultValue) fail(400, `Invalid MQSC ${key} type`);
+  }
   // Extra scalar/list MQSC attributes are fixture data; no command execution occurs.
   for (const [key, value] of Object.entries(record)) {
     if (!/^[a-z][a-z0-9]*$/.test(key) || !['string', 'number'].includes(typeof value) &&
@@ -124,6 +127,7 @@ function createResource(type, resourceName, parameters = {}) {
   }
   if (type === 'channel' && !['SDR', 'RCVR', 'SVR', 'RQSTR', 'CLUSSDR', 'CLUSRCVR', 'SVRCONN', 'CLNTCONN'].includes(String(record.chltype).toUpperCase())) fail(400, 'Invalid channel type');
   if (type === 'listener') integer(record.port, 'Listener port', 1, 65535);
+  if (type === 'topic') integer(record.defprty, 'Topic priority', 0, 9);
   record[spec.identity] = resourceName;
   return record;
 }

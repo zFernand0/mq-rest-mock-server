@@ -42,6 +42,10 @@ test('IBM attribute names, flag syntax, and mixed queue filtering match the docu
   assert.equal(queue.cluster.namelist, 'CLUSTER.LIST'); assert.equal(queue.extended.allowSharedInput, false); assert.equal(queue.trigger.enabled, true);
   assert.equal((await mqsc(jsonCommand('alter', 'qlocal', 'FLAGS.Q', { notrigger: 'yes', share: 'yes' }))).data.overallCompletionCode, 0);
   for (const parameters of [{ replace: true }, { replace: 'no' }, { replace: 'yes', noreplace: 'yes' }, { share: 'no' }]) assert.equal((await mqsc(jsonCommand('define', 'qlocal', 'INVALID.Q', parameters))).status, 400);
+  for (const type of ['alias', 'remote', 'model']) assert.equal((await request('/ibmmq/rest/v1/admin/qmgr/QM1/queue', { method: 'POST', body: { name: 'INCOMPLETE.Q', type } })).status, 400);
+  for (const body of [jsonCommand('display', 'qmgr', undefined, null), { ...jsonCommand('display', 'qmgr'), responseParameters: null }]) assert.equal((await mqsc(body)).status, 400);
+  assert.equal((await mqsc(jsonCommand('define', 'topic', 'BAD.PRIORITY', { defprty: 10 }))).status, 400);
+  assert.equal((await mqsc(jsonCommand('define', 'channel', 'BAD.DESCR', { descr: 1 }))).status, 400);
   await put('mixed status filter');
   const filtered = await request('/ibmmq/rest/v1/admin/qmgr/QM1/queue?status=*&filter=status.currentDepth:greaterThan:0');
   assert.equal(filtered.status, 200); assert.deepEqual(filtered.data.queue.map(queue => queue.name), ['DEV.QUEUE.1']);
@@ -63,15 +67,20 @@ test('message fixtures normalize hexadecimal metadata and reject unsafe HTTP hea
     const invalid = structuredClone(fixtures); Object.assign(invalid.queueManagers[0].messages['DEV.QUEUE.1'][0], patch);
     assert.throws(() => createApp({ fixtures: invalid }));
   }
+  for (const user of [{ password: 'p', otp: 'true', roles: ['MQWebUser'] }, { password: 1, otp: true, roles: ['MQWebUser'] }]) assert.throws(() => createApp({ users: { user } }));
   const { put } = await setup(t);
   assert.equal((await put('no', { headers: { 'ibm-mq-md-correlationId': 'x'.repeat(257) } })).status, 400);
   assert.equal((await put('no', { headers: { 'ibm-mq-usr': 'a;1e100;float' } })).status, 400);
 });
 test('sessions revoked during scripted latency cannot mutate resource state', async t => {
   let now = 100000;
-  const { request, put } = await setup(t, { now: () => now, config: { sessionTtlMs: 1000 }, scenarios: [{ method: 'POST', path: '/ibmmq/rest/v3/messaging/*', steps: [{ delayMs: 30 }] }] });
+  const { request, put, app } = await setup(t, { now: () => now, config: { sessionTtlMs: 1000 }, scenarios: [{ method: 'POST', path: '/ibmmq/rest/v3/messaging/*', steps: [{ delayMs: 300 }] }] });
   const pending = put('expired session');
-  await new Promise(resolve => setTimeout(resolve, 5));
+  const deadline = Date.now() + 3000;
+  while (app.locals.state.scenarios[0].index === 0) {
+    assert.ok(Date.now() < deadline, 'request did not enter scripted latency');
+    await new Promise(resolve => setTimeout(resolve, 2));
+  }
   now += 1000;
   assert.equal((await pending).status, 401); assert.equal((await request('/health')).data.messages, 0);
 });

@@ -3,7 +3,7 @@
  * Copyright 2026 Fernando Rijo Cedeno
  */
 const { MqError, fail, object, keys, wildcard, name: validateName } = require('./protocol');
-const { OBJECT_TYPES, QUEUE_TYPES, createQueue, queueParameters, queueFromParameters, createResource } = require('./resources');
+const { OBJECT_TYPES, QUEUE_TYPES, queueParameters, queueFromParameters, createResource } = require('./resources');
 const VERBS = { dis: 'display', def: 'define', alt: 'alter', del: 'delete' };
 const QUEUES = { queue: null, qlocal: 'local', qalias: 'alias', qremote: 'remote', qmodel: 'model', qstatus: 'local' };
 const STATUSES = { chstatus: 'channel', lsstatus: 'listener', svstatus: 'service' };
@@ -74,12 +74,12 @@ function normalize(request) {
   if (!['display', 'define', 'alter', 'delete', 'clear', 'start', 'stop', 'ping'].includes(command)) fail(400, 'Unsupported MQSC command');
   if (request.name !== undefined && typeof request.name !== 'string') fail(400, 'MQSC name must be a string');
   const parameters = {};
-  for (const [key, value] of Object.entries(object(request.parameters || {}, 'Parameters'))) {
+  for (const [key, value] of Object.entries(object(request.parameters === undefined ? {} : request.parameters, 'Parameters'))) {
     const normalized = key.toLowerCase();
     if (Object.hasOwn(parameters, normalized) || !/^[a-z][a-z0-9]*$/.test(normalized)) fail(400, 'Invalid or duplicate MQSC parameter');
     parameters[normalized] = value;
   }
-  const responseParameters = request.responseParameters || [];
+  const responseParameters = request.responseParameters === undefined ? [] : request.responseParameters;
   for (const [positive, negative] of [['replace', 'noreplace'], ['purge', 'nopurge'], ['share', 'noshare'], ['trigger', 'notrigger']]) {
     if (parameters[positive] !== undefined && parameters[negative] !== undefined) fail(400, 'Conflicting MQSC flag parameters');
     for (const flag of [positive, negative]) {

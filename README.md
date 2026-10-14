@@ -120,6 +120,8 @@ Queue/channel/subscription REST resources are v1-only. V2/v3 return 404 for thos
 
 V1 queue POST replaces an existing definition by default and retains its messages. `?noReplace` rejects duplicates, and `?like=EXISTING.Q` copies a definition. PATCH merges supplied attributes. Queue type and name cannot change in place. DELETE rejects nonempty queues unless `?purge` is present. Queue manager creation/deletion are not published REST resources and are not fabricated here.
 
+Without `like`, alias creation requires `alias.targetName`, remote creation requires `remote.qmgrName`, and model creation requires `model.type`.
+
 Supported queue groups and fields are defined in [src/resources.js](src/resources.js): `general`, `storage`, `applicationDefaults`, `extended`, `alias`, `remote`, `model`, `cluster`, and `trigger`. This is an attribute subset; unsupported fields fail explicitly. Trigger and cluster attributes are stored as configuration metadata; trigger processes and cluster routing are not simulated.
 
 `attributes=storage,general` requests groups; `attributes=storage.maximumDepth` requests individual fields. `attributes=*` requests all implemented configuration attributes. Queue status is requested separately with `status=*` or `status=status.currentDepth`. Queue-manager status is returned only while running.
