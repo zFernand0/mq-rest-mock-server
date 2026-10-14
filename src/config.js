@@ -8,7 +8,7 @@ const DEFAULTS = Object.freeze({
   maxQueueManagers: 100, maxObjects: 10000, maxMessages: 10000,
   maxMessageBytes: 16777216, maxSessions: 1000, maxWaitMs: 30000,
   maxWaiters: 100, maxAuditEntries: 1000, maxScenarios: 100,
-  requireCsrf: true, latencyMs: 0, corsOrigin: ''
+  requireCsrf: true, latencyMs: 0, corsOrigin: '', mqscResponseStyle: 'distributed', logRequests: false
 });
 const ENV = {
   host: 'HOST', port: 'PORT', bodyLimit: 'BODY_LIMIT', sessionTtlMs: 'SESSION_TTL_MS',
@@ -16,7 +16,7 @@ const ENV = {
   maxObjects: 'MAX_OBJECTS', maxMessages: 'MAX_MESSAGES', maxMessageBytes: 'MAX_MESSAGE_BYTES',
   maxSessions: 'MAX_SESSIONS', maxWaitMs: 'MAX_WAIT_MS', maxWaiters: 'MAX_WAITERS',
   maxAuditEntries: 'MAX_AUDIT_ENTRIES', maxScenarios: 'MAX_SCENARIOS',
-  requireCsrf: 'REQUIRE_CSRF', latencyMs: 'LATENCY_MS', corsOrigin: 'CORS_ORIGIN'
+  requireCsrf: 'REQUIRE_CSRF', latencyMs: 'LATENCY_MS', corsOrigin: 'CORS_ORIGIN', mqscResponseStyle: 'MQSC_RESPONSE_STYLE', logRequests: 'LOG_REQUESTS'
 };
 function createConfig(overrides = {}, env = {}) {
   for (const key of Object.keys(overrides)) {
@@ -39,6 +39,7 @@ function createConfig(overrides = {}, env = {}) {
     } else {
       if (typeof value !== 'string' || (!value.trim() && key !== 'corsOrigin')) throw new TypeError(`${envKey} must be a string`);
       if (key === 'bodyLimit' && (!/^\d+(?:\.\d+)?(?:b|kb|mb)?$/i.test(value) || parseFloat(value) <= 0)) throw new TypeError('BODY_LIMIT must be a positive byte size');
+      if (key === 'mqscResponseStyle' && !['distributed', 'zos'].includes(value)) throw new TypeError('MQSC_RESPONSE_STYLE must be distributed or zos');
       config[key] = value;
     }
   }

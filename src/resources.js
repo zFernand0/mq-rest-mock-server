@@ -6,9 +6,9 @@ const { fail, keys, object, name, merge, integer } = require('./protocol');
 const QUEUE_TYPES = { local: 'QLOCAL', alias: 'QALIAS', model: 'QMODEL', remote: 'QREMOTE' };
 const QUEUE_FIELDS = {
   general: { description: ['descr', 'string'], inhibitGet: ['get', 'inhibit'], inhibitPut: ['put', 'inhibit'], isTransmissionQueue: ['usage', 'transmission'] },
-  storage: { maximumDepth: ['maxdepth', 'integer', 999999999], maximumMessageLength: ['maxmsgl', 'integer', 104857600], messageDeliverySequence: ['msgdlvsq', 'enum', { fifo: 'FIFO', priority: 'PRIORITY' }] },
+  storage: { maximumDepth: ['maxdepth', 'integer', 999999999], maximumMessageLength: ['maxmsgl', 'integer', 104857600], messageDeliverySequence: ['msgdlvsq', 'enum', { fifo: 'FIFO', priority: 'PRIORITY' }], indexType: ['indxtype', 'enum', { none: 'NONE', correlationId: 'CORRELID', groupId: 'GROUPID', messageId: 'MSGID', messageToken: 'MSGTOKEN' }] },
   applicationDefaults: { messagePriority: ['defprty', 'integer', 9], messagePersistence: ['defpsist', 'enum', { persistent: 'YES', nonPersistent: 'NO' }] },
-  extended: { allowSharedInput: ['share', 'boolean'], backoutThreshold: ['bothresh', 'integer', 999999999], backoutRequeueQueueName: ['boqname', 'string'] },
+  extended: { allowSharedInput: ['share', 'boolean'], backoutThreshold: ['bothresh', 'integer', 999999999], backoutRequeueQueueName: ['boqname', 'string'], hardenGetBackout: ['hardenbo', 'boolean'] },
   alias: { targetName: ['target', 'string'], targetType: ['targtype', 'enum', { queue: 'QUEUE', topic: 'TOPIC' }] },
   remote: { queueName: ['rname', 'string'], qmgrName: ['rqmname', 'string'], transmissionQueueName: ['xmitq', 'string'] },
   model: { type: ['deftype', 'enum', { permanentDynamic: 'PERMDYN', temporaryDynamic: 'TEMPDYN' }] },

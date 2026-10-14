@@ -5,6 +5,27 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { setup, basic, jsonCommand, messagePath } = require('./helpers');
+test('request logging reports methods, full paths, and statuses without request contents', async t => {
+  const lines = [];
+  const { request, put } = await setup(t, { config: { logRequests: true }, logger: { log: value => lines.push(value), error() {} } });
+  await request('/health?secret=SECRET_QUERY', { auth: null });
+  await request('/ibmmq/rest/v3/login', { auth: basic('adminusr', 'SECRET_PASSWORD') });
+  await put('SECRET_BODY', { headers: { 'X-Request-Id': 'SECRET_HEADER' } });
+  await request('/missing');
+  assert.deepEqual(lines, [
+    'GET /health -> 200',
+    'GET /ibmmq/rest/v3/login -> 401',
+    `POST ${messagePath} -> 201`,
+    'GET /missing -> 404'
+  ]);
+  assert.equal(lines.join('\n').includes('SECRET'), false);
+});
+test('request logging is disabled by default', async t => {
+  const lines = [];
+  const { request } = await setup(t, { logger: { log: value => lines.push(value), error() {} } });
+  assert.equal((await request('/health', { auth: null })).status, 200);
+  assert.deepEqual(lines, []);
+});
 test('administrative diagnostics redact credentials and obey audit bounds', async t => {
   const { request, put } = await setup(t, { config: { maxAuditEntries: 3 } });
   await request('/ibmmq/rest/v3/login');

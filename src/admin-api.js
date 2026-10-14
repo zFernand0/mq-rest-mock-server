@@ -79,7 +79,7 @@ function selectedStatus(record, attributes, status, defaults, statusKey = 'statu
   }
   return result;
 }
-function addAdminApi(register, state, auth) {
+function addAdminApi(register, state, auth, config) {
   register('/admin/installation{/:installationName}', {
     get(req, res) {
       const values = query(req, ['attributes']);
@@ -108,7 +108,7 @@ function addAdminApi(register, state, auth) {
       const request = parseRequest(jsonBody(req));
       auth.administration(req, !['display', 'ping'].includes(request.command));
       const qmgr = state.qmgr(req.params.qmgrName);
-      res.json(runMqsc(state, qmgr, request));
+      res.json(runMqsc(state, qmgr, request, config.mqscResponseStyle));
     }
   });
   register('/admin/qmgr/:qmgrName/queue', {
