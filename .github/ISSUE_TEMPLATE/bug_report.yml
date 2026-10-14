@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Fernando Rijo Cedeno
+name: Bug report
+description: Report incorrect behavior in the IBM MQ REST mock server.
+title: "[Bug]: "
+body:
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: What happened?
+      description: Describe the problem and the affected endpoint, MQSC command, or client workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include startup options, REST API version, and the request or script that triggers the problem.
+      placeholder: |
+        1. Start the server with...
+        2. Send this request...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: Describe the expected result and link relevant IBM documentation.
+    validations:
+      required: true
+  - type: input
+    id: node_version
+    attributes:
+      label: Node.js version
+      description: Output of node --version.
+      placeholder: v22.x.x
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, server version or commit, and client version.
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration and fixtures
+      description: Include relevant environment variables and createApp configuration.
+      render: text
+  - type: textarea
+    id: request_response
+    attributes:
+      label: Request, response, or logs
+      description: Include the HTTP request, response status, and payload or relevant client errors.
+      render: text

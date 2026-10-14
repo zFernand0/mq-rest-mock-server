@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Fernando Rijo Cedeno
+name: Feature request
+description: Propose a capability or improvement to the IBM MQ REST mock server.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe the client development or testing workflow this would improve.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_behavior
+    attributes:
+      label: Proposed behavior
+      description: Include affected API versions, MQ objects, MQSC commands, headers, or configuration options.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Examples and references
+      description: Include example requests, expected payloads, and IBM documentation.
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: How to verify it works
+      description: Describe observable results or client scenarios that demonstrate the feature is complete.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe existing fixtures, configuration, or workarounds and why they do not meet the need.
